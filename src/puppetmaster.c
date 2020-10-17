@@ -5,7 +5,6 @@
 
 int main(int argc, char *argv[])
 {
-    FILE *child;
     int pid;
     int p[2];   /* parent: r, w -- parent reads from child */
     int c[2];   /*  child: r, w -- child reads from parent*/
@@ -14,7 +13,7 @@ int main(int argc, char *argv[])
     if (argc != 2)
     {
         fprintf(stderr, "USAGE: %s [executable]\n", argv[0]);
-        return 1;
+        return -1;
     }
 
     pipe(p);
@@ -23,24 +22,24 @@ int main(int argc, char *argv[])
     if ((pid = fork()) == -1)
     {
         perror("fork");
-        return 1;
+        return -2;
     }
     else if (pid == 0) /* child */
     {
-        dup2(0, c[0]);
-        dup2(1, p[1]);
+        dup2(c[0], 0);
+        dup2(p[1], 1);
 
         close(c[1]);
         close(p[0]);
 
         execlp(argv[1], argv[1], NULL);
         perror("execve");
-        return 1;
+        return -3;
     }
 
     /* parent */
-    dup2(1, c[1]);
-    dup2(0, p[0]);
+    dup2(c[1], 1);
+    dup2(p[0], 0);
 
     close(c[0]);
     close(p[1]);
@@ -49,11 +48,11 @@ int main(int argc, char *argv[])
     if (buffer == NULL)
     {
         perror("buffer");
-        return 1;
+        return -4;
     }
 
-    nbytes = read(p[0], buffer, 4095);
-    if (nbytes > 0)
+    while ((nbytes = read(p[0], buffer, 4095)) != 0)
+    //if (nbytes > 0)
     {
         printf("captured buffer: [%s]\n", buffer);
     }
