@@ -30,7 +30,10 @@ int main(int argc, char *argv[])
         dup2(0, c[0]);
         dup2(1, p[1]);
 
-        execve(argv[1], argv+1, NULL);
+        close(c[1]);
+        close(p[0]);
+
+        execlp(argv[1], argv[1], NULL);
         perror("execve");
         return 1;
     }
@@ -38,6 +41,9 @@ int main(int argc, char *argv[])
     /* parent */
     dup2(1, c[1]);
     dup2(0, p[0]);
+
+    close(c[0]);
+    close(p[1]);
 
     char *buffer = (char*)calloc(sizeof(char),4096);
     if (buffer == NULL)
