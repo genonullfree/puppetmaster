@@ -38,9 +38,6 @@ int main(int argc, char *argv[])
     }
 
     /* parent */
-    dup2(c[1], 1);
-    dup2(p[0], 0);
-
     close(c[0]);
     close(p[1]);
 
@@ -51,8 +48,8 @@ int main(int argc, char *argv[])
         return -4;
     }
 
-    while ((nbytes = read(p[0], buffer, 4095)) != 0)
-    //if (nbytes > 0)
+    nbytes = read(p[0], buffer, 4095);
+    if (nbytes > 0)
     {
         printf("captured buffer: [%s]\n", buffer);
     }
