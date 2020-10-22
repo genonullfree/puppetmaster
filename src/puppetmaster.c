@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <unistd.h>
+#include <sys/select.h>
 #include <sys/types.h>
 
+//TODO: Make this cleaner
 uint8_t _code[][5] = {
     {0x41, 0x42, 0x43, 0x0a, 0x00},
     {0x44, 0x45, 0x46, 0x0a, 0x00},
@@ -18,6 +21,7 @@ int main(int argc, char *argv[])
     int c[2];   /*  child: r, w -- child reads from parent*/
     int nbytes   = 0;
     int count    = 0;
+    int flags    = 0;
     char *buffer = NULL;
 
     /* Print help if necessary */
@@ -60,6 +64,10 @@ int main(int argc, char *argv[])
     close(c[0]);
     close(p[1]);
 
+    /* Set the reading pipe to be non-blocking */
+    flags = fcntl(p[0], F_GETFL, 0);
+    fcntl(p[0], F_SETFL, flags | O_NONBLOCK);
+
     /* Create 4k buffer for reading child output */
     buffer = (char*)calloc(sizeof(char),4096);
     if (buffer == NULL)
@@ -69,8 +77,7 @@ int main(int argc, char *argv[])
     }
 
     /* Read input (output from child) */
-    nbytes = read(p[0], buffer, 4095);
-    if (nbytes > 0)
+    if ((nbytes = read(p[0], buffer, 4095)) > 0)
     {
         /* Display output from child */
         printf("captured buffer, len(%d): [%s]\n", nbytes, buffer);
@@ -79,20 +86,20 @@ int main(int argc, char *argv[])
     while (_code[count][0] != 0x00)
     {
         /* Write to child pid's input */
-        nbytes = write(c[1], _code[count], 4);
-        if (nbytes < 1)
+        if (write(c[1], _code[count], 5) < 1)
         {
             /* Break out if error */
             perror("write");
             break;
         }
 
+        usleep(1500);
+
         /* Read input (output from child) */
-        nbytes = read(p[0], buffer, 4095);
-        if (nbytes > 0)
+        if ((nbytes = read(p[0], buffer, 4095)) > 0)
         {
             /* Display output from child */
-            printf("captured buffer: [%s]\n", buffer);
+            printf("captured buffer len(%d): [%s]\n", nbytes, buffer);
         }
 
         count++;
